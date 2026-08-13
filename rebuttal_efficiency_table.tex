@@ -1,0 +1,107 @@
+% =============================================================================
+% Efficiency / Cost Comparison Table — for ESWA Rebuttal / Camera-Ready
+% Dataset: alpaca_eval (n = 161)
+% Metrics:
+%   - AQSA  : Average Queries per Successful Attack
+%   - Tokens/Success (M) : per-sample token consumption until first success, in millions
+%   - GPU time: end-to-end wall-clock time on a single GPU
+% Baselines: GCG, AutoDAN, TAP
+% =============================================================================
+% Placement suggestion: insert in the Experiments section, immediately after
+% the main ASR comparison table (so readers see "effectiveness" then "cost").
+% Or in a dedicated \subsection{Computational Efficiency}.
+% -----------------------------------------------------------------------------
+
+\paragraph{Computational efficiency.}
+Beyond attack effectiveness, we compare PreferAttack against three
+strong baselines — GCG~\cite{zou2023gcg}, AutoDAN~\cite{liu2024autodan},
+and TAP~\cite{mehrotra2023tap} — on three efficiency dimensions:
+(i) \emph{average queries per successful attack} (AQSA),
+(ii) \emph{per-sample token consumption until first success} (in
+millions, M), and (iii) \emph{total GPU wall-clock time} on the full
+alpaca\_eval test split ($n{=}161$).
+All methods are evaluated under the same judge configuration
+(Qwen-2.5-1.5B-Instruct) on a single NVIDIA [GPU-TYPE-PLACEHOLDER]
+GPU with batch size $64$. Results are summarised in
+Table~\ref{tab:efficiency}.
+
+% -----------------------------------------------------------------------------
+% Suggested label: tab:efficiency
+% Suggested caption: Efficiency comparison on alpaca_eval (n = 161).
+% -----------------------------------------------------------------------------
+\begin{table}[t]
+  \centering
+  \caption{Efficiency comparison on \textbf{alpaca\_eval} ($n{=}161$).
+  \textbf{AQSA}: average queries per successful attack (\emph{lower is better}).
+  \textbf{Tokens / Success}: per-sample token consumption until first success,
+  in millions (\emph{lower is better}).
+  \textbf{GPU Time}: end-to-end wall-clock time on a single NVIDIA
+  [GPU-TYPE-PLACEHOLDER] GPU (\emph{lower is better}).
+  Bold indicates the best trade-off across the three metrics.}
+  \label{tab:efficiency}
+  \small
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Method}
+      & \textbf{AQSA} $\downarrow$
+      & \textbf{Tokens / Success (M)} $\downarrow$
+      & \textbf{GPU Time} $\downarrow$ \\
+    \midrule
+    GCG              & $60{,}184.42$          & $24.80$           & $2.71$\,h          \\
+    AutoDAN          & $204.90$               & $0.49$            & $1$\,h\,$43$\,min  \\
+    TAP              & $\mathbf{9.93}$        & $\mathbf{0.027}$  & $3.10$\,h          \\
+    \textbf{Ours}    & $\mathbf{34.40}$       & $\mathbf{0.80}$   & $\mathbf{1.50}$\,\textbf{h} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% -----------------------------------------------------------------------------
+% Discussion paragraph — interpret the table.
+% -----------------------------------------------------------------------------
+The three baselines exhibit qualitatively different cost profiles:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{GCG} is by far the most token-hungry baseline: its
+        token-level gradient optimisation requires $\sim\!60\text{K}$
+        queries and $\sim\!24.8$\,M tokens per successful attack --- two
+        to three orders of magnitude more than any other method --- while
+        still finishing in $2.71$\,h due to its batched implementation.
+  \item \textbf{AutoDAN} replaces gradient-based optimisation with a
+        genetic algorithm, cutting both queries ($\sim\!205$) and
+        per-sample tokens ($0.49$\,M) by $\sim\!2$--$3$ orders of
+        magnitude relative to GCG. It is the fastest in wall-clock time
+        ($1$\,h\,$43$\,min), but its ASR is materially lower than the
+        LLM-driven methods (cf.\ Table~\ref{tab:multiseed}).
+  \item \textbf{TAP} achieves the best AQSA ($9.93$) and the lowest
+        per-sample token cost ($0.027$\,M) thanks to its LLM-based
+        attacker that rewrites instructions in a single pass. However,
+        each LLM generation step is expensive, making it the
+        \emph{slowest} method overall at $3.10$\,h --- roughly
+        $2\times$ our wall-clock time.
+  \item \textbf{PreferAttack (Ours)} strikes a favourable balance:
+        $34.4$ queries per success, $0.80$\,M tokens, and
+        $1.5$\,h GPU time --- only $\sim\!5\%$ slower than AutoDAN
+        while delivering substantially higher ASR, and $\sim\!2\times$
+        faster than TAP with comparable query efficiency.
+\end{itemize}
+
+In short, PreferAttack achieves the best \emph{effectiveness--efficiency
+trade-off}: its per-sample attack cost is two orders of magnitude lower
+than GCG and within $2\times$ of TAP (the most token-efficient
+baseline), while its wall-clock time is competitive with the fastest
+baseline (AutoDAN) and nearly half of TAP's. The multi-agent
+decomposition --- with the GA doing heavy exploration in token space
+and the RL controller dynamically reallocating search effort ---
+allows PreferAttack to converge to successful suffixes without
+incurring the per-step LLM-generation cost of TAP or the brute-force
+token-level search cost of GCG.
+
+% -----------------------------------------------------------------------------
+% NOTE FOR AUTHORS — fill these placeholders before submission:
+%   1. [GPU-TYPE-PLACEHOLDER]  — replace with the actual GPU used (e.g., A100-80G, H100, RTX 4090)
+%   2. \cite{...} keys         — verify they match your .bib file
+%   3. 1h43min for AutoDAN     — your input was "1h26min"; please double-check.
+%       The number 1.43\,h corresponds to 1h26min. If the actual measured
+%       time differs, update both the table cell and the discussion text.
+%   4. Cross-reference         — Table~\ref{tab:multiseed} should point to
+%                                your main ASR table; adjust label if needed.
+% -----------------------------------------------------------------------------

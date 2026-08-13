@@ -1,0 +1,13 @@
+{
+  "benchmark": "code_judge_bench",
+  "total_samples": 2103,
+  "train_samples": 1682,
+  "test_samples": 421,
+  "train_ratio": 0.8,
+  "test_ratio": 0.2,
+  "random_seed": 42,
+  "data_files": {
+    "train": "data/split/code_judge_bench_train.json",
+    "test": "data/split/code_judge_bench_test.json"
+  }
+}

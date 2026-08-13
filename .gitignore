@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+
+# Manuscript PDF (under review — do not publish)
+*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
