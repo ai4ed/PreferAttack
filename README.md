@@ -291,7 +291,7 @@ If you use this code, please cite:
 ```bibtex
 @article{preferattack,
   title   = {A Collaborative Multi-Agent Framework for Preference Attacks on {LLM-as-a-Judge} Models},
-  author  = {<authors>},   % TODO: fill in from the camera-ready manuscript
+  author  = {Zheng Zhou, Xueyi Li*,, Wenzhou Dou*,, Zitao Liu}, 
   journal = {Expert Systems with Applications},
   note    = {Accepted},
   year    = {2026}
