@@ -79,32 +79,6 @@ The judge is a **vLLM-served local model** (the default runners target Qwen3-VL-
 
 ---
 
-## Requirements
-
-The pinned dependencies are in [`requirements.txt`](requirements.txt):
-
-```
-fschat==0.2.20  nltk==3.8.1  numpy==1.26.0  openai==0.28.1
-torch==2.0.1  tqdm==4.66.1  transformers==4.28.0  sentencepiece==0.1.99
-protobuf==4.24.4  accelerate==0.23.0
-```
-
-Beyond the base pin file, the full pipeline additionally depends on the following (all now listed in [`requirements.txt`](requirements.txt)):
-
-| Dependency | Needed for |
-|---|---|
-| `vllm` | main attack (`utils/vllm_judge.py` uses in-process `vllm.LLM`) |
-| `sentence-transformers` | defense experiments (MiniLM embedder) |
-| `scikit-learn` | defense experiments (LR / CV / metrics) |
-
-> **Note on version conflict (audit §8.2):** recent `vllm` releases require a newer PyTorch than the `torch==2.0.1` pin. Install a `vllm` version compatible with your PyTorch, or upgrade PyTorch / Transformers together.
-
-A CUDA-capable GPU and a local judge model (e.g. a Qwen3 / Qwen2.5 / Llama instruction-tuned checkpoint) are required for the main attack. The shell runners hard-code server-specific model paths (`/root/autodl-tmp/...`) — override them with `--qwen3-path` (see below).
-
-> **Note on the environment claim:** the paper's implementation details mention Python 3.12 / PyTorch 2.8 / Transformers 4.57, but `requirements.txt` pins `torch==2.0.1` / `transformers==4.28.0`. Treat the pin file as the authoritative dependency set for this checkout.
-
----
-
 ## Data
 
 Data lives under `data/split/`. Each benchmark has a **split-info** file mapping to its train/test JSON:
