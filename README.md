@@ -291,7 +291,8 @@ If you use this code, please cite:
   title   = {A Collaborative Multi-Agent Framework for Preference Attacks on {LLM-as-a-Judge} Models},
   author  = {Zheng Zhou, Xueyi Li*,, Wenzhou Dou*,, Zitao Liu}, 
   journal = {Expert Systems with Applications},
-  note    = {Accepted},
+  volume={***},
+  pages={***-***},
   year    = {2026}
 }
 ```
