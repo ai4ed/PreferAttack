@@ -299,7 +299,7 @@ If you use this code, please cite:
   title   = {A Collaborative Multi-Agent Framework for Preference Attacks on {LLM-as-a-Judge} Models},
   author  = {<authors>},   % TODO: fill in from the camera-ready manuscript
   journal = {Expert Systems with Applications},
-  note    = {Under review},
+  note    = {Accepted},
   year    = {2026}
 }
 ```
