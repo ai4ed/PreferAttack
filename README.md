@@ -5,7 +5,6 @@
 <p align="center">
   🖥️ <a href="#quick-start-main-attack"><b>Quickstart</b></a> &nbsp; | &nbsp;
   🧪 <a href="#defense-experiments"><b>Defense</b></a> &nbsp; | &nbsp;
-  ⚠️ <a href="#reproducibility-status"><b>Reproducibility</b></a> &nbsp; | &nbsp;
   ©️ <a href="#citation"><b>Citation</b></a>
 </p>
 
