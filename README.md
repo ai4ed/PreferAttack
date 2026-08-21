@@ -48,7 +48,7 @@ The judge is a **vLLM-served local model** (the default runners target Qwen3-VL-
 
 ---
 
-## Repository layout
+## Project Structure
 
 ```
 ├── Multi_Agent_Framework.py           # main attack entry point
