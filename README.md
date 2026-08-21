@@ -279,24 +279,6 @@ Underlying utilities live in `src/defense/` (`model_defense.py`, `mlp_defense.py
 
 ---
 
-## Reproducibility status
-
-This repository implements the *overall* PreferAttack structure (suffix-appending prompt construction, the pairwise judge prompt, the A/B parsing + confidence hierarchy, the Eq. (6) fitness form, the three-agent decomposition, and the experience-replay / policy-net / target-net / ε-greedy RL skeleton). These are consistent with the paper.
-
-However, a systematic audit ([`PreferAttack代码与论文一致性审计报告.md`](PreferAttack代码与论文一致性审计报告.md)) found material discrepancies that mean **the current code should not yet be treated as a strict, ready-to-reproduce implementation of the paper's reported results.** The main ones:
-
-1. **DQN does not actually learn on most samples.** A fresh `RLController` is created *per sample*; with a replay buffer that requires ≥64 transitions before training and ≤100 generations/sample, many (often the easiest, earliest-success) samples complete with zero gradient updates, and the target network never syncs (audit §2.1).
-2. **DQN action space ≠ paper.** The paper defines joint `(strategy, mutation, crossover, top-k, elite)` actions; the code uses 11 independent parameter tweaks + 4 strategy-only no-ops, with `top-k` meaning momentum-dictionary size rather than candidate retention (§2.2).
-3. **Module-level attention sign is inverted**, biasing re-use toward *high* (worse) fitness categories (§2.3); the hybrid operator interleaves two independent populations instead of the paper's *cascaded* word-then-module offspring (§2.4); the word-level operator does not implement Eq. (12)'s exponential synonym mixture or `μ`/`B` budget (§2.5).
-4. **Search decoding ≠ greedy.** Candidate batches default to `temperature=0.1` / `max_new_tokens=10`, not the paper's uniform `temperature=0, max_tokens=16` (§2.6); the runner uses `GPT_MUTATION_PROB=0.05`, not the paper's `mutation=0.01` (§2.7); and the default run does **not** stop on first success (§2.8).
-5. **Metrics:** `AQSA` uses the batch-count statistic above (§3.1); **BRR** (Baseline Reversal Rate) is not implemented (§3.2); unparseable *clean* baseline outputs are silently assigned a random label (§3.3); the per-sample cache is disabled by default (§3.4).
-6. **Defenses & data:** ASR-W / ASR-R use only the succeeded subset as denominator (§4.1); the full-prompt transfer detector trains and tests on inconsistent views (§4.2); defense scripts target a different model/dataset than the paper's Table 17 (§4.3); TCD / PRED / cascade defenses have no code (§4.4); Code Judge Bench has question-level train/test overlap (§5.2); the data loader drops the original `question_id` (§5.3).
-7. **Engineering:** the v2 entry (`Multi_Agent_Framework_v2.py`) has a judge-interface signature mismatch and cannot complete the main flow (§7); ablation entry files (`Multi_Agent_Framework_WordLevelOnly.py` / `_ModuleLevelOnly.py`) are present locally but **git-ignored**, so a fresh clone cannot run `run_ablation_*.sh` (§6.2).
-
-The audit report (§11) gives a priority-ordered repair plan. Until the first- and second-priority fixes are applied and experiments re-run, treat the paper's ASR, ablation-gain, query-efficiency, and defense claims as *pending re-validation* against this code.
-
----
-
 ## Citation
 
 If you use this code, please cite:
