@@ -122,7 +122,7 @@ A split-info file looks like:
 
 ```bash
 # clone and enter the repo
-git clone <repo-url> PreferAttack
+git clone [<repo-url> PreferAttack](https://github.com/ai4ed/PreferAttack.git)
 cd PreferAttack
 
 # install deps (see Requirements)
