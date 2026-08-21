@@ -60,26 +60,26 @@ The judge is a **vLLM-served local model** (the default runners target Qwen3-VL-
 ├── Multi_Agent_Framework.py           # 主攻击入口 / main attack entry point
 ├── Multi_Agent_Framework_v2.py        # 实验性 v2 入口（见审计 §7 — 接口不匹配）
 ├── utils/
-│   ├── vllm_judge.py                  # vLLM 评判器 + 评分
-│   ├── vllm_judge_enhanced.py         # 增强评判器（v2）
-│   ├── judge.py                       # 评判器基类 / 抽象
-│   ├── qwen_judge.py                  # Qwen 评判器辅助
-│   ├── rl_controller.py               # DQN 控制器（状态 → 动作）
-│   ├── opt_utils.py                   # 词级 / 模块级 / 混合算子
-│   ├── pairwise_loader.py             # JSON 数组数据加载
-│   ├── string_utils.py                # 后缀 / 模板工具
-│   └── data_types.py                  # 数据类与枚举
+│   ├── vllm_judge.py                  
+│   ├── vllm_judge_enhanced.py         
+│   ├── judge.py                       
+│   ├── qwen_judge.py                  
+│   ├── rl_controller.py               
+│   ├── opt_utils.py                   
+│   ├── pairwise_loader.py             
+│   ├── string_utils.py                
+│   └── data_types.py                  
 ├── src/defense/
-│   ├── model_defense.py               # LR 分类器 + 语义相似度防御
-│   ├── mlp_defense.py                 # MLP 分类器防御
-│   └── ppl_defense.py                 # 困惑度（PPL）防御工具
-├── run_*.sh                           # shell runner（见下）
-├── run_stealth_defenses.py            # LR + 相似度防御 runner
-├── run_mlp_defense.py                 # MLP 防御 runner
-├── check_asr_pairwise.py              # 从结果文件统计 ASR / 查询次数
-├── data/split/                        # 数据集 + split-info 文件
-├── assets/prompt_group.pth            # 初始后缀种群（启动时加载）
-└── *.tex                              # rebuttal 用 LaTeX 表格
+│   ├── model_defense.py               
+│   ├── mlp_defense.py                
+│   └── ppl_defense.py                 
+├── run_*.sh                           
+├── run_stealth_defenses.py            
+├── run_mlp_defense.py                 
+├── check_asr_pairwise.py              
+├── data/split/                        
+├── assets/prompt_group.pth            
+└── *.tex                              
 ```
 
 ---
