@@ -34,8 +34,8 @@ Given a pairwise evaluation sample `(instruction, response_a, response_b)`, a ju
 
 框架由三个协同智能体组成 / The framework is composed of three collaborating agents:
 
-| Agent | Responsibility | Where |
-|---|---|---|
+| Agent        | Responsibility | Where |
+|---           |----------------|-------|
 | ** Scoring** | 构造攻击候选、查询评判器、计算适应度（式(6)：`翻转 → 1−conf`，`未翻转 → conf`；越小越好） | `ScoringAgent` in `Multi_Agent_Framework.py` |
 | ** Decision** | 选择搜索模式与 GA 超参数，可选由 DQN 控制器驱动 | `DecisionAgent` + `utils/rl_controller.py` |
 | ** Attack** | 通过词级 / 模块级 / 多粒度算子演化后缀种群 | `AttackAgent` + `utils/opt_utils.py` |
