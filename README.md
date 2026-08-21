@@ -246,7 +246,6 @@ python run_mlp_defense.py        # MLP classifier defense (prints LR-vs-MLP comp
 
 Underlying utilities live in `src/defense/` (`model_defense.py`, `mlp_defense.py`, `ppl_defense.py`).
 
-> **Note:** these scripts read attack-result files that are **not committed** to the repo (`results/*.json`) and external GCG/AutoDAN baselines under `/root/autodan/...` and `/root/AutoDAN-main/...`. Generate the PreferAttack attack results with the main entry point first, and provide the baseline files before these runners can reproduce their tables.
 
 ---
 
