@@ -194,11 +194,9 @@ bash run_pairwise_qwen3.sh \
 | `--word_dict_topk` | 2000 | momentum-dictionary prune size |
 | `--use_rl_controller` | off | enable the DQN controller |
 | `--rl_lr` / `--rl_gamma` / `--rl_epsilon` | `0.1` / `0.9` / `0.2` | RL hyper-parameters |
-| `--use_cache` | off | enable per-sample judge cache |
 | `--stop_on_first_success` | off | stop a sample immediately after the first flip |
 | `--append_to` | `instruction` | where to append the suffix |
 | `--seed` | unset | global RNG seed for reproducibility |
-| `--verify_best_every` | 0 | verify best suffix every N generations |
 
 ---
 
