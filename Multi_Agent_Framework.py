@@ -472,10 +472,6 @@ def main():
         base_text = base_resp.raw_response
         baseline_token_usage = extract_usage(base_resp)
 
-        # 依据用户选择，如果选择 'target' 则对每个样本把 base_choice 翻转得到目标侧（0->A,1->B），
-        # 否则直接使用 args.append_to 作为本样本的 append 模式。
-        target_pref = 1 - int(base_choice)
-        target_pref = 'a' if target_pref == 0 else 'b'
         if args.append_to == 'target':
             if base_choice is None:
                 append_mode = 'instruction'  # 无 baseline 时退回到追加到 instruction
@@ -900,6 +896,7 @@ def main():
                 # "token_credit": token_credit
             },
             "success": bool(is_success),
+            "baseline_parse_failed": base_choice is None,
             "queries": {
                 "api_calls": api_calls,
                 "candidates_evaluated": candidates_evaluated,
