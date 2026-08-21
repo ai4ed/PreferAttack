@@ -114,8 +114,6 @@ A split-info file looks like:
 }
 ```
 
-> **Known issue (audit §5.2):** Code Judge Bench is split at the response-pair level, not by `question_id` — ~87% of test rows share a `question_id` with the training split. See the audit report before relying on it for "unseen-question generalization" claims.
-
 ---
 
 ## Quick start (main attack)
