@@ -1,125 +1,238 @@
 # PreferAttack
-# A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models
 
-## Abstract
+**PreferAttack** is a collaborative multi-agent framework for **preference-reversal attacks** on **LLM-as-a-Judge** models. It optimizes an *adversarial suffix* appended to the user instruction so that the judge flips its pairwise preference between two candidate responses (A vs. B), while the responses themselves are left untouched.
 
-Large language models (LLMs) are increasingly employed as evaluative judges in a wide range of decision-making tasks. However, these models remain vulnerable to preference-reversal attacks, where adversaries manipulate prompts to induce preference judgments opposite to the models’ originally aligned behavior. Existing work most relevant to this problem largely builds on attack mechanisms adapted from jailbreak methods. Unfortunately, when transferred to preference-reversal settings, these jailbreak-derived attack paradigms exhibit three key limitations: (1) \textbf{optimization–feedback mismatch}, as most existing jailbreak attacks are designed to optimize against continuous surrogate signals, whereas preference-reversal tasks are evaluated through discrete, noisy, and comparison-dependent feedback; (2) \textbf{insufficient strategic adaptability}, as a  fixed jailbreak attack paradigm cannot reliably handle input pairs with varying reversal difficulty and sensitivity; and (3) \textbf{limited stealthiness}, as gradient-based optimization often produces semantically unnatural prompts that distort the original pairwise comparison context, making attacks easier to detect. In light of these challenges, we ask: Can we develop a collaborative preference-reversal attack framework that adapts to discrete and noisy decision feedback, dynamically selects effective strategies for heterogeneous samples, and generates stealthy prompts that evade detection? In this paper, we propose PreferAttack, a collaborative multi-agent framework that addresses these challenges through coordinated scoring, decision, and attack agents. Across three benchmark datasets and ten judge models, PreferAttack outperforms competitive baselines in attack success rate and achieves a favorable trade-off between success rate and attack efficiency. 
+> This repository accompanies the manuscript *"A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models"* (submitted to ESWA). See [`PreferAttack代码与论文一致性审计报告.md`](PreferAttack代码与论文一致性审计报告.md) for a full **code ↔ paper consistency audit** (in Chinese).
 
-## Installation
+---
 
-### Requirements
+## Overview
 
-- Python 3.12
-- CUDA-capable GPU (recommended)
-- PyTorch 2.8.0
-- Transformers 4.57.3
-
-### Setup
-
-```bash
-git clone https://github.com/xjyp/PreferAttack.git
-cd CamouflageAttack
-pip install -r requirements.txt
-```
-
-## Quick Start
-
-### Run Attack
-
-```bash
-bash run_pairwise.sh
-```
-
-The results will be saved in the directory specified by `result.dir` in the configuration file.
-
-## Project Structure
+Given a pairwise evaluation sample `(instruction, response_a, response_b)`, a judge model produces an initial preference. PreferAttack searches for a short suffix `s` such that
 
 ```
-Multi-Agent Framework/
-├── assets/
-│   ├── build_prompt_group_pairwise_target_append.py
-│   ├── prompt_group.pth
-│   ├── prompt_group_multi_strategy.pth
-│   ├── prompt_group_pairwise.pth
-│   └── prompt_group_pairwise_target_append_custom_1010...
-│
-├── data/
-│   └── split/
-│       ├── alpaca_eval_split_info.json
-│       ├── alpaca_eval_test.json
-│       ├── alpaca_eval_train.json
-│       ├── arena_hard_split_info.json
-│       ├── arena_hard_test.json
-│       ├── arena_hard_train.json
-│       ├── code_judge_bench_split_info.json
-│       ├── code_judge_bench_test.json
-│       └── code_judge_bench_train.json
-│
-├── src/
-│   └── defense/
-│       ├── __init__.py
-│       └── ppl_defense.py
-│
+instruction' = instruction.rstrip() + " " + s
+```
+
+and, when judged on `(instruction', response_a, response_b)`, the judge flips its preference. The attack is **stealthy** by design: the suffix is evolved through *semantic-preserving* transformations rather than injected gibberish.
+
+The framework is composed of three collaborating agents:
+
+| Agent | Responsibility | Where |
+|---|---|---|
+| **Scoring Agent** | Builds attacked candidates, queries the judge, computes fitness (Eq. (6): `flipped → 1−conf`, `not flipped → conf`; lower is better) | `ScoringAgent` in `Multi_Agent_Framework.py` |
+| **Decision Agent** | Selects search mode and GA hyper-parameters, optionally steered by a DQN controller | `DecisionAgent` + `utils/rl_controller.py` |
+| **Attack Agent** | Evolves the suffix population via word-level / module-level / multi-granularity operators | `AttackAgent` + `utils/opt_utils.py` |
+
+The judge is a **vLLM-served local model** (the default runners target Qwen3-VL-8B-Instruct), implemented in `utils/vllm_judge.py`.
+
+---
+
+## Repository layout
+
+```
+├── Multi_Agent_Framework.py           # main attack entry point
+├── Multi_Agent_Framework_v2.py        # experimental v2 entry (see audit §7 — interface mismatch)
 ├── utils/
-│   ├── data_types.py
-│   ├── judge.py
-│   ├── opt_utils.py
-│   ├── pairwise_loader.py
-│   ├── qwen_judge.py
-│   ├── rl_controller.py
-│   ├── string_utils.py
-│   └── vllm_judge.py
-│
-├── LICENSE
-├── Multi_Agent_Framework.py
-├── README.md
-├── check_asr_pairwise.py
-├── requirements.txt
-└── run_pairwise_qwen3.sh
+│   ├── vllm_judge.py                  # vLLM-backed judge + scoring
+│   ├── vllm_judge_enhanced.py         # enhanced judge (v2)
+│   ├── judge.py                       # judge base/abstractions
+│   ├── qwen_judge.py                  # Qwen judge helpers
+│   ├── rl_controller.py               # DQN controller (state → action)
+│   ├── opt_utils.py                   # word-level / module-level / hybrid operators
+│   ├── pairwise_loader.py             # data loading from JSON arrays
+│   ├── string_utils.py                # suffix / template utilities
+│   └── data_types.py                  # dataclasses & enums
+├── src/defense/
+│   ├── model_defense.py               # LR classifier + semantic-similarity defenses
+│   ├── mlp_defense.py                 # MLP classifier defense
+│   └── ppl_defense.py                 # perplexity (PPL) defense utilities
+├── run_*.sh                           # shell runners (see below)
+├── run_stealth_defenses.py            # LR + similarity defense runner
+├── run_mlp_defense.py                 # MLP defense runner
+├── check_asr_pairwise.py              # ASR / query statistics from a result file
+├── data/split/                        # datasets + split-info files
+├── assets/prompt_group.pth            # seed suffix population (loaded at startup)
+└── *.tex                              # LaTeX tables used for rebuttal
 ```
 
-## Configuration
+---
 
-### Data Configuration
+## Requirements
 
-- `name`: Dataset name (for logging purposes)
-- `path`: Path to dataset file (JSONL format)
-
-### Output Configuration
-
-- `log.dir`: Directory for log files
-- `result.dir`: Directory for result files
+The pinned requirements are in [`requirements.txt`](requirements.txt):
 
 ```
+fschat==0.2.20  nltk==3.8.1  numpy==1.26.0  openai==0.28.1
+torch==2.0.1  tqdm==4.66.1  transformers==4.28.0  sentencepiece==0.1.99
+protobuf==4.24.4  accelerate==0.23.0
+```
 
-## How It Works
+**Important:** `requirements.txt` is *not* sufficient to run the full pipeline. You will additionally need, depending on which experiments you run:
 
-PreferAttack employs a three-agent framework:
+| Dependency | Needed for |
+|---|---|
+| `vllm` | main attack (`utils/vllm_judge.py` uses in-process `vllm.LLM`) |
+| `sentence-transformers` | defense experiments (MiniLM embedder) |
+| `scikit-learn` | defense experiments (LR / CV / metrics) |
 
-1. **Decision Agent**: Improves strategic adaptability by dynamically selecting attack strategies and adaptively scheduling attack parameters according to task-specific feedback and intermediate search states.
+A CUDA-capable GPU and a local judge model (e.g. a Qwen3 / Qwen2.5 / Llama instruction-tuned checkpoint) are required for the main attack. The shell runners hard-code server-specific model paths (`/root/autodl-tmp/...`) — override them with `--qwen3-path` (see below).
 
-2. **Scoring Agent**: Mitigates optimization–feedback mismatch by modeling the judge in a preference-aware manner and deriving a task-specific fitness signal from discrete preference-reversal outcomes.
+> **Note on the environment claim:** the paper's implementation details mention Python 3.12 / PyTorch 2.8 / Transformers 4.57, but `requirements.txt` pins `torch==2.0.1` / `transformers==4.28.0`. Treat the pin file as the authoritative dependency set for this checkout.
 
-3. **Action Agent**: Enhances stealthiness by applying semantics-preserving transformations to generate and iteratively refine adversarial prompts while preserving semantic coherence with the original comparison context.
+---
 
+## Data
 
+Data lives under `data/split/`. Each benchmark has a **split-info** file mapping to its train/test JSON:
 
-## Citation
+| Benchmark | Split info | Train / Test |
+|---|---|---|
+| Alpaca Eval | `data/split/alpaca_eval_split_info.json` | `alpaca_eval_train.json` / `alpaca_eval_test.json` |
+| Arena Hard | `data/split/arena_hard_split_info.json` | `arena_hard_train.json` / `arena_hard_test.json` |
+| Code Judge Bench | `data/split/code_judge_bench_split_info.json` | `code_judge_bench_train.json` / `code_judge_bench_test.json` |
 
-If you find this repository useful in your research, please consider citing our work:
+### Format
 
-```bibtex
-@article{zhou2026collaborative,
-  title={A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models},
-  author={Zhou,Zheng and Dou, Wenzhou and Li, Xueyi and  Liu, Zitao},
-  journal={Expert Systems with Applications},
-  volume={xxx},
-  pages={xxx-xxx},
-  year={2026}
+Data files are **JSON arrays** (`[...]`), *not* JSONL — the loader calls `json.load`, not line-by-line parsing (`utils/pairwise_loader.py`). Each element has this shape:
+
+```json
+{
+  "question_id": "alpaca_445",
+  "instruction": "...",
+  "response_a": "...",
+  "response_b": "...",
+  "model_a": "gpt-4o-2024-05-13",
+  "model_b": "claude-3-5-sonnet-20240620",
+  "metadata": { "...": "..." }
 }
 ```
 
+A split-info file looks like:
+
+```json
+{
+  "benchmark": "alpaca_eval",
+  "data_files": {
+    "train": "data/split/alpaca_eval_train.json",
+    "test":  "data/split/alpaca_eval_test.json"
+  }
+}
+```
+
+> **Known issue (audit §5.2):** Code Judge Bench is split at the response-pair level, not by `question_id` — ~87% of test rows share a `question_id` with the training split. See the audit report before relying on it for "unseen-question generalization" claims.
+
+---
+
+## Quick start (main attack)
+
+The main entry point is `Multi_Agent_Framework.py`, which reads samples one at a time and evolves a suffix population per sample.
+
+```bash
+# 1) clone and enter the repo
+git clone <repo-url> PreferAttack
+cd PreferAttack
+
+# 2) install deps (see Requirements — add vllm explicitly)
+pip install -r requirements.txt vllm
+
+# 3) run the attack on a small subset, pointing at your local judge model
+python Multi_Agent_Framework.py \
+  --qwen3_path /path/to/your/judge/model \
+  --split_info data/split/alpaca_eval_split_info.json \
+  --split test \
+  --num_samples 20 \
+  --batch_size 64 \
+  --num_steps 100 \
+  --use_rl_controller \
+  --gpt_mutation_prob 0.05 \
+  --save_path results/demo.json
+```
+
+Results are written to the path given by **`--save_path`** (there is **no** `result.dir` config file — output location is controlled directly by this argument and by `--save-dir` in the shell runners). Each result file is a JSON object `{"meta": {...}, "records": [...]}` with per-sample `baseline`, `attack`, `success`, and `queries` fields, plus an `aggregate_stats` block.
+
+### Via the shell runners
+
+The runners are written for a **Linux/bash + GNU `getopt`** environment and default to server-specific model paths. Override the model path with `--qwen3-path`.
+
+| Script | Purpose |
+|---|---|
+| `run_pairwise_qwen3.sh` | serial multi-dataset run (default `alpaca_eval arena_hard`) |
+| `run_pairwise_qwen3_all.sh` | outer multi-model × inner multi-dataset sweep |
+| `run_pairwise_qwen3_all_code_judge.sh` | multi-model sweep on Code Judge Bench |
+| `run_seed_sweep.sh` | 5-seed sweep on a 20-sample subset |
+| `run_phase1_alpaca.sh` / `run_phase2_best_seed.sh` | multi-seed phase 1 / 2 runs |
+| `chain_sweep_to_phase2.sh` / `chain_phase2_to_alpaca_qwen15b.sh` | chained sweep → phase runs |
+| `run_ablation_wordlevel.sh` / `run_ablation_modulelevel.sh` | word-only / module-only ablations |
+
+Example:
+
+```bash
+bash run_pairwise_qwen3.sh \
+  --qwen3-path /path/to/your/judge/model \
+  --datasets "alpaca_eval arena_hard" \
+  --num-samples 20
+```
+
+---
+
+## Evaluating results (ASR & query statistics)
+
+```bash
+python check_asr_pairwise.py --path results/<your_result_file>.json
+```
+
+This prints **ASR** (attack success rate) plus average **API calls**, **candidates evaluated**, and **token** counts (overall and for successful samples).
+
+> **Note (audit §3.1):** the `api_calls` field is computed as `ceil(candidates / batch_max_size)`, not as the actual number of `llm.generate` calls or candidate evaluations. `candidates_evaluated` is the more faithful per-sample query counter.
+
+---
+
+## Defense experiments
+
+Two defense runners reproduce the metric protocol of the paper's PPL-defense tables (`ASR` / `ASR-W` / `ASR-Reduction` / `FNR` / `FPR`), applied to *learned* and *semantic-similarity* detectors:
+
+```bash
+python run_stealth_defenses.py   # LR classifier + similarity defenses → results/stealth_defenses_summary.json
+python run_mlp_defense.py        # MLP classifier defense (prints LR-vs-MLP comparison) → results/mlp_defense_summary.json
+```
+
+Underlying utilities live in `src/defense/` (`model_defense.py`, `mlp_defense.py`, `ppl_defense.py`).
+
+> **Note:** these scripts read attack-result files that are **not committed** to the repo (`results/*.json`) and external GCG/AutoDAN baselines under `/root/autodan/...` and `/root/AutoDAN-main/...`. Generate the PreferAttack attack results with the main entry point first, and provide the baseline files before these runners can reproduce their tables.
+
+---
+
+## Reproducibility status
+
+This repository implements the *overall* PreferAttack structure (suffix-appending prompt construction, the pairwise judge prompt, the A/B parsing + confidence hierarchy, the Eq. (6) fitness form, the three-agent decomposition, and the experience-replay / policy-net / target-net / ε-greedy RL skeleton). These are consistent with the paper.
+
+However, a systematic audit ([`PreferAttack代码与论文一致性审计报告.md`](PreferAttack代码与论文一致性审计报告.md)) found material discrepancies that mean **the current code should not yet be treated as a strict, ready-to-reproduce implementation of the paper's reported results.** The main ones:
+
+1. **DQN does not actually learn on most samples.** A fresh `RLController` is created *per sample*; with a replay buffer that requires ≥64 transitions before training and ≤100 generations/sample, many (often the easiest, earliest-success) samples complete with zero gradient updates, and the target network never syncs (audit §2.1).
+2. **DQN action space ≠ paper.** The paper defines joint `(strategy, mutation, crossover, top-k, elite)` actions; the code uses 11 independent parameter tweaks + 4 strategy-only no-ops, with `top-k` meaning momentum-dictionary size rather than candidate retention (§2.2).
+3. **Module-level attention sign is inverted**, biasing re-use toward *high* (worse) fitness categories (§2.3); the hybrid operator interleaves two independent populations instead of the paper's *cascaded* word-then-module offspring (§2.4); the word-level operator does not implement Eq. (12)'s exponential synonym mixture or `μ`/`B` budget (§2.5).
+4. **Search decoding ≠ greedy.** Candidate batches default to `temperature=0.1` / `max_new_tokens=10`, not the paper's uniform `temperature=0, max_tokens=16` (§2.6); the runner uses `GPT_MUTATION_PROB=0.05`, not the paper's `mutation=0.01` (§2.7); and the default run does **not** stop on first success (§2.8).
+5. **Metrics:** `AQSA` uses the batch-count statistic above (§3.1); **BRR** (Baseline Reversal Rate) is not implemented (§3.2); unparseable *clean* baseline outputs are silently assigned a random label (§3.3); the per-sample cache is disabled by default (§3.4).
+6. **Defenses & data:** ASR-W / ASR-R use only the succeeded subset as denominator (§4.1); the full-prompt transfer detector trains and tests on inconsistent views (§4.2); defense scripts target a different model/dataset than the paper's Table 17 (§4.3); TCD / PRED / cascade defenses have no code (§4.4); Code Judge Bench has question-level train/test overlap (§5.2); the data loader drops the original `question_id` (§5.3).
+7. **Engineering:** the v2 entry (`Multi_Agent_Framework_v2.py`) has a judge-interface signature mismatch and cannot complete the main flow (§7); ablation entry files (`Multi_Agent_Framework_WordLevelOnly.py` / `_ModuleLevelOnly.py`) are present locally but **git-ignored**, so a fresh clone cannot run `run_ablation_*.sh` (§6.2).
+
+The audit report (§11) gives a priority-ordered repair plan. Until the first- and second-priority fixes are applied and experiments re-run, treat the paper's ASR, ablation-gain, query-efficiency, and defense claims as *pending re-validation* against this code.
+
+---
 
 ## License
 
-MIT License
+See [`LICENSE`](LICENSE).
+
+---
+
+## Citation
+
+```bibtex
+@misc{preferattack,
+  title  = {A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models},
+  note   = {Under review (ESWA)},
+  howpublished = {\url{<repo-url>}}
+}
+```
