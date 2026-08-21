@@ -323,10 +323,7 @@ def main():
     ap.add_argument("--mutation", type=float, default=0.01)
     ap.add_argument("--save_path", type=str, default="results/pairwise_ga.json")
     # controls for verification, batching and caching
-    ap.add_argument("--verify_best_every", type=int, default=0,
-                    help="If >0, verify the best suffix every N generations (0=never).\n"
-                         "If --stop_on_first_success is set, this will be treated as 1.\n"
-                         "If =0 表示禁用.")
+
     ap.add_argument("--stop_on_first_success", action='store_true',
                     help="Stop the inner search loop as soon as a flip is detected for this sample.")
     ap.add_argument("--batch_max_size", type=int, default=32,
@@ -500,9 +497,7 @@ def main():
         succeeded_strategy_types = []
 
         # controls for verification frequency and caching per sample
-        verify_every = args.verify_best_every
         if args.stop_on_first_success:
-            verify_every = 1
             print("Note: --stop_on_first_success is set; will verify every generation and stop immediately upon detecting a flip.")
         cache = {} if args.use_cache else None
         # last-best tracking to avoid final re-eval
