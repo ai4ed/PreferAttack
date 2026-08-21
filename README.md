@@ -10,7 +10,7 @@
   ©️ <a href="#citation"><b>Citation</b></a>
 </p>
 
-> This repository provides the reference implementation accompanying the manuscript *"A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models"* (submitted to ESWA). A full **code ↔ paper consistency audit** is available in [`PreferAttack代码与论文一致性审计报告.md`](PreferAttack代码与论文一致性审计报告.md) (in Chinese).
+> This repository provides the reference implementation accompanying the manuscript *"A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models"* (submitted to ESWA).
 
 ---
 
