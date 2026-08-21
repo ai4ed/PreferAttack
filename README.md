@@ -230,9 +230,6 @@ python check_asr_pairwise.py --path results/<your_result_file>.json
 ```
 
 This prints **ASR** (attack success rate) plus average **API calls**, **candidates evaluated**, and **token** counts (overall and for successful samples).
-
-> **Note (audit §3.1):** the `api_calls` field is computed as `ceil(candidates / batch_max_size)`, not as the actual number of `llm.generate` calls or candidate evaluations. `candidates_evaluated` is the more faithful per-sample query counter.
-
 ---
 
 ## Defense experiments
