@@ -1,4 +1,4 @@
-# PreferAttack
+# A collaborative multi-agent framework for preference-reversal attacks on LLM-as-a-Judge models
 
 **PreferAttack** is a collaborative multi-agent framework for **preference-reversal attacks** on **LLM-as-a-Judge** models. It optimizes an *adversarial suffix* appended to the user instruction so that the judge flips its pairwise preference between two candidate responses (A vs. B), while the responses themselves are left untouched.
 
