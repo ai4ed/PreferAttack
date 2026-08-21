@@ -1,7 +1,5 @@
 # PreferAttack
 
-**PreferAttack** 是一个针对 **LLM-as-a-Judge（大模型评判器）** 的**协作式多智能体偏好翻转攻击**框架。它优化一段追加在用户指令后的*对抗后缀*，使评判器在两条候选回答（A vs. B）之间翻转其成对偏好，而回答本身保持不变。
-
 **PreferAttack** is a collaborative multi-agent framework for **preference-reversal attacks** on **LLM-as-a-Judge** models. It optimizes an *adversarial suffix* appended to the user instruction so that the judge flips its pairwise preference between two candidate responses (A vs. B), while the responses themselves are left untouched.
 
 <p align="center">
@@ -11,7 +9,7 @@
   ©️ <a href="#citation"><b>引用 / Citation</b></a>
 </p>
 
-> 本仓库提供论文 *"A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models"*（投稿 ESWA）的参考实现。完整的**代码 ↔ 论文一致性审计**见 [`PreferAttack代码与论文一致性审计报告.md`](PreferAttack代码与论文一致性审计报告.md)。
+> 本仓库提供论文 "A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models"*（投稿 ESWA）的参考实现。完整的**代码
 >
 > This repository provides the reference implementation accompanying the manuscript *"A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models"* (submitted to ESWA). A full **code ↔ paper consistency audit** is in [`PreferAttack代码与论文一致性审计报告.md`](PreferAttack代码与论文一致性审计报告.md) (in Chinese).
 
