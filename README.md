@@ -52,7 +52,6 @@ The judge is a **vLLM-served local model** (the default runners target Qwen3-VL-
 
 ```
 ├── Multi_Agent_Framework.py           # main attack entry point
-├── Multi_Agent_Framework_v2.py        # experimental v2 entry (see audit §7 — interface mismatch)
 ├── utils/
 │   ├── vllm_judge.py                  # vLLM-backed judge + scoring
 │   ├── vllm_judge_enhanced.py         # enhanced judge (v2)
