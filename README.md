@@ -30,23 +30,15 @@
 
 ## 概述 / Overview
 
-给定一个成对评测样本 `(instruction, response_a, response_b)`，评判模型先给出初始偏好。PreferAttack 搜索一个短后缀 `s`，使得
-
-```
-instruction' = instruction.rstrip() + " " + s
-```
-
-当评判器对 `(instruction', response_a, response_b)` 进行评判时，其偏好被翻转。攻击的**隐蔽性**来自：后缀通过*语义保持*变换演化，而非注入乱码。
-
 Given a pairwise evaluation sample `(instruction, response_a, response_b)`, a judge model produces an initial preference. PreferAttack searches for a short suffix `s` such that, when judged on `(instruction', response_a, response_b)`, the judge flips its preference. The attack is **stealthy** by design: the suffix is evolved through *semantic-preserving* transformations rather than injected gibberish.
 
 框架由三个协同智能体组成 / The framework is composed of three collaborating agents:
 
-| 智能体 / Agent | 职责 / Responsibility | 位置 / Where |
+| Agent | Responsibility | Where |
 |---|---|---|
-| **评分智能体 / Scoring** | 构造攻击候选、查询评判器、计算适应度（式(6)：`翻转 → 1−conf`，`未翻转 → conf`；越小越好） | `ScoringAgent` in `Multi_Agent_Framework.py` |
-| **决策智能体 / Decision** | 选择搜索模式与 GA 超参数，可选由 DQN 控制器驱动 | `DecisionAgent` + `utils/rl_controller.py` |
-| **攻击智能体 / Attack** | 通过词级 / 模块级 / 多粒度算子演化后缀种群 | `AttackAgent` + `utils/opt_utils.py` |
+| ** Scoring** | 构造攻击候选、查询评判器、计算适应度（式(6)：`翻转 → 1−conf`，`未翻转 → conf`；越小越好） | `ScoringAgent` in `Multi_Agent_Framework.py` |
+| ** Decision** | 选择搜索模式与 GA 超参数，可选由 DQN 控制器驱动 | `DecisionAgent` + `utils/rl_controller.py` |
+| ** Attack** | 通过词级 / 模块级 / 多粒度算子演化后缀种群 | `AttackAgent` + `utils/opt_utils.py` |
 
 评判器是 **vLLM 服务的本地模型**（默认 runner 面向 Qwen3-VL-8B-Instruct），实现于 `utils/vllm_judge.py`。
 
