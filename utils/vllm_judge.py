@@ -262,9 +262,8 @@ class VLLMJudge(BaseJudge):
         # 则视为"响应成功但攻击未翻转"，返回原始偏好并给高置信以强烈惩罚该候选。
         if original_preference is not None:
             return int(original_preference), 1.0
-        # baseline 调用尚无原始偏好，保留随机兜底以兼容现有流程
-        import random
-        return random.randint(0, 1), 0.3
+            
+        return None, 0.0
 
     def register_strategy(self, strategy_json: dict):
         """Register a successful strategy into the judge's strategy library.
