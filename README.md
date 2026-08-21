@@ -255,8 +255,6 @@ Underlying utilities live in `src/defense/` (`model_defense.py`, `mlp_defense.py
 
 ### Additional defenses (TCD / PRED / cascade)
 
-These fill the gap flagged in the audit (§4.4, "TCD / PRED / cascade have no code"):
-
 | File | Role |
 |---|---|
 | `src/defense/tail_consistency_defense.py` | **Tail-Consistency Defense (TCD)** core. Instead of detecting "does this suffix look adversarial", it asks whether the suffix has *causal influence*: it re-queries the judge after truncating the last `K` tokens of the attacked instruction. Benign preferences are truncation-robust, whereas an append-only attack lives entirely in the tail, so truncation reverts it to baseline. Provides `TailConsistencyDefense.evaluate_sample` (v1, agreement-based), `.evaluate_sample_v2` (v2, position-bias-corrected persistence rate), and `calibrate_threshold` / `calibrate_threshold_v2` for FPR calibration. |
@@ -271,9 +269,30 @@ python src/defense/run_tail_consistency_defense.py \
   --judge_model /path/to/judge/model \
   --use_v2
 ```
-
 ---
 
+PRED reads the per-sample PPL signals produced by the `compute_fnr_fpr.py` step:
+
+```bash
+# PRED (PPL ensemble) — input: results_fnr_fpr_<dataset>_llama3b.json
+python pred_defense.py \
+  --inputs results_fnr_fpr_cjb_llama3b.json results_fnr_fpr_arena_hard_llama3b.json \
+  --target_fpr 0.01 \
+  --asr_w_dir /root/PreferAttack \
+  --output_json results/pred_defense_summary.json
+```
+
+The cascade runs PRED + TCD end-to-end and loads a Llama-3.2-3B-Instruct checkpoint as both the PPL detector and the judge:
+
+```bash
+# PRED + TCD cascade
+python pred_tcd_cascade.py \
+  --attack_results_json results/<attack>.json \
+  --fnr_fpr_json results_fnr_fpr_cjb_llama3b.json \
+  --ppl_judge_model /path/to/Llama-3.2-3B-Instruct \
+  --clean_calibration_json data/split/code_judge_bench_train.json \
+  --output_json results/results_cascade_cjb.json
+```
 ## Citation
 
 If you use this code, please cite:
