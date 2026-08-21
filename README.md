@@ -305,4 +305,4 @@ If you use this code, please cite:
 
 ## License
 
-See [`LICENSE`](LICENSE).
+Apache-2.0
