@@ -22,8 +22,6 @@
 - **Three LLM-as-a-Judge benchmarks** — Alpaca Eval, Arena Hard, and Code Judge Bench.
 - **Defense studies** — perplexity (PPL), learned classifiers (LR / MLP), and semantic-similarity detectors.
 
-> ⚠️ These are the paper's stated contributions. A systematic audit (linked above) found that several of them are **not faithfully implemented** in this checkout. See [Reproducibility status](#reproducibility-status) before relying on the numbers.
-
 ---
 
 ## Overview
