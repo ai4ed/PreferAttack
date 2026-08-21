@@ -9,9 +9,7 @@
   ©️ <a href="#citation"><b>引用 / Citation</b></a>
 </p>
 
-> 本仓库提供论文 "A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models"*（投稿 ESWA）的参考实现。完整的**代码
->
-> This repository provides the reference implementation accompanying the manuscript *"A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models"* (submitted to ESWA). A full **code ↔ paper consistency audit** is in [`PreferAttack代码与论文一致性审计报告.md`](PreferAttack代码与论文一致性审计报告.md) (in Chinese).
+> This repository provides the reference implementation accompanying the manuscript *"A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models"* (submitted to ESWA).
 
 ---
 
