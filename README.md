@@ -34,11 +34,11 @@ Given a pairwise evaluation sample `(instruction, response_a, response_b)`, a ju
 
 框架由三个协同智能体组成 / The framework is composed of three collaborating agents:
 
-| Agent        | Responsibility | Where |
-|---           |----------------|-------|
-| ** Scoring** | 构造攻击候选、查询评判器、计算适应度（式(6)：`翻转 → 1−conf`，`未翻转 → conf`；越小越好） | `ScoringAgent` in `Multi_Agent_Framework.py` |
-| ** Decision** | 选择搜索模式与 GA 超参数，可选由 DQN 控制器驱动 | `DecisionAgent` + `utils/rl_controller.py` |
-| ** Attack** | 通过词级 / 模块级 / 多粒度算子演化后缀种群 | `AttackAgent` + `utils/opt_utils.py` |
+| 智能体 / Agent | 职责 / Responsibility | 位置 / Where |
+|---|---|---|
+| **评分智能体 / Scoring** | 构造攻击候选、查询评判器、计算适应度（式(6)：`翻转 → 1−conf`，`未翻转 → conf`；越小越好） | `ScoringAgent` in `Multi_Agent_Framework.py` |
+| **决策智能体 / Decision** | 选择搜索模式与 GA 超参数，可选由 DQN 控制器驱动 | `DecisionAgent` + `utils/rl_controller.py` |
+| **攻击智能体 / Attack** | 通过词级 / 模块级 / 多粒度算子演化后缀种群 | `AttackAgent` + `utils/opt_utils.py` |
 
 评判器是 **vLLM 服务的本地模型**（默认 runner 面向 Qwen3-VL-8B-Instruct），实现于 `utils/vllm_judge.py`。
 
