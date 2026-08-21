@@ -253,6 +253,27 @@ Underlying utilities live in `src/defense/` (`model_defense.py`, `mlp_defense.py
 
 ---
 
+### Additional defenses (TCD / PRED / cascade)
+
+These fill the gap flagged in the audit (§4.4, "TCD / PRED / cascade have no code"):
+
+| File | Role |
+|---|---|
+| `src/defense/tail_consistency_defense.py` | **Tail-Consistency Defense (TCD)** core. Instead of detecting "does this suffix look adversarial", it asks whether the suffix has *causal influence*: it re-queries the judge after truncating the last `K` tokens of the attacked instruction. Benign preferences are truncation-robust, whereas an append-only attack lives entirely in the tail, so truncation reverts it to baseline. Provides `TailConsistencyDefense.evaluate_sample` (v1, agreement-based), `.evaluate_sample_v2` (v2, position-bias-corrected persistence rate), and `calibrate_threshold` / `calibrate_threshold_v2` for FPR calibration. |
+| `src/defense/run_tail_consistency_defense.py` | **TCD standalone runner.** Loads a vLLM judge, calibrates the TCD threshold on clean pairs, evaluates TCD on attack samples, and writes `ASR / ASR-W / ASR-Reduction / FNR / FPR` to a summary JSON. |
+| `pred_defense.py` | **PRED (PREference-Robust Ensemble Defense).** Three PPL-derived gates — windowed PPL `S_w`, local anomaly factor `S_l = ppl_w/ppl`, and relative ratio `S_r = ppl_w(attacked)/ppl_w(clean)` — each calibrated on clean data to FPR ≤ α and combined under OR / AND / per-gate / majority modes. |
+| `pred_tcd_cascade.py` | **PRED + TCD two-stage cascade.** Cheap offline PRED runs first (`filter` / `escalate` / `accept`); borderline samples escalate to the expensive online TCD truncation re-judgment. |
+
+```bash
+# TCD (v1 agreement-based; add --use_v2 for the position-bias-corrected variant)
+python src/defense/run_tail_consistency_defense.py \
+  --attack_json results/<attack>.json \
+  --judge_model /path/to/judge/model \
+  --use_v2
+```
+
+---
+
 ## Citation
 
 If you use this code, please cite:
