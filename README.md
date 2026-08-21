@@ -8,8 +8,6 @@
   ©️ <a href="#citation"><b>Citation</b></a>
 </p>
 
-> This repository provides the reference implementation accompanying the manuscript *"A Collaborative Multi-Agent Framework for Preference Attacks on LLM-as-a-Judge Models"* (submitted to ESWA).
-
 ---
 
 ## Highlights
