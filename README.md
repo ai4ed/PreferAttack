@@ -66,9 +66,13 @@ The judge is a **vLLM-served local model** (the default runners target Qwen3-VL-
 │   ├── model_defense.py               # LR classifier + semantic-similarity defenses
 │   ├── mlp_defense.py                 # MLP classifier defense
 │   └── ppl_defense.py                 # perplexity (PPL) defense utilities
+│   ├── tail_consistency_defense.py    # Tail-Consistency Defense (TCD) core
+│   └── run_tail_consistency_defense.py # TCD standalone runner
 ├── run_*.sh                           # shell runners (see below)
 ├── run_stealth_defenses.py            # LR + similarity defense runner
 ├── run_mlp_defense.py                 # MLP defense runner
+├── pred_defense.py                    # PRED (PPL ensemble) defense
+├── pred_tcd_cascade.py                # PRED + TCD two-stage cascade
 ├── check_asr_pairwise.py              # ASR / query statistics from a result file
 ├── data/split/                        # datasets + split-info files
 ├── assets/prompt_group.pth            # seed suffix population (loaded at startup)
