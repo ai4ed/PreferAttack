@@ -62,10 +62,10 @@ The judge is a **vLLM-served local model** (the default runners target Qwen3-VL-
 │   ├── mlp_defense.py                 # MLP classifier defense
 │   └── ppl_defense.py                 # perplexity (PPL) defense utilities
 │   ├── tail_consistency_defense.py    # Tail-Consistency Defense (TCD) core
-│   └── run_tail_consistency_defense.py # TCD standalone runner
 ├── run_*.sh                           # shell runners (see below)
 ├── run_stealth_defenses.py            # LR + similarity defense runner
 ├── run_mlp_defense.py                 # MLP defense runner
+├── run_tail_consistency_defense.py    # TCD standalone runner
 ├── pred_defense.py                    # PRED (PPL ensemble) defense
 ├── pred_tcd_cascade.py                # PRED + TCD two-stage cascade
 ├── check_asr_pairwise.py              # ASR / query statistics from a result file
@@ -247,7 +247,7 @@ Underlying utilities live in `src/defense/` (`model_defense.py`, `mlp_defense.py
 | File | Role |
 |---|---|
 | `src/defense/tail_consistency_defense.py` | **Tail-Consistency Defense (TCD)** core. Instead of detecting "does this suffix look adversarial", it asks whether the suffix has *causal influence*: it re-queries the judge after truncating the last `K` tokens of the attacked instruction. Benign preferences are truncation-robust, whereas an append-only attack lives entirely in the tail, so truncation reverts it to baseline. |
-| `src/defense/run_tail_consistency_defense.py` | **TCD standalone runner.** Loads a vLLM judge, calibrates the TCD threshold on clean pairs, evaluates TCD on attack samples, and writes `ASR / ASR-W / ASR-Reduction / FNR / FPR` to a summary JSON. |
+| `run_tail_consistency_defense.py` | **TCD standalone runner.** Loads a vLLM judge, calibrates the TCD threshold on clean pairs, evaluates TCD on attack samples, and writes `ASR / ASR-W / ASR-Reduction / FNR / FPR` to a summary JSON. |
 | `pred_defense.py` | **PRED (PREference-Robust Ensemble Defense).** Three PPL-derived gates — windowed PPL `S_w`, local anomaly factor `S_l = ppl_w/ppl`, and relative ratio `S_r = ppl_w(attacked)/ppl_w(clean)` — each calibrated on clean data to FPR ≤ α and combined under OR / AND / per-gate / majority modes. |
 | `pred_tcd_cascade.py` | **PRED + TCD two-stage cascade.** Cheap offline PRED runs first (`filter` / `escalate` / `accept`); borderline samples escalate to the expensive online TCD truncation re-judgment. |
 
