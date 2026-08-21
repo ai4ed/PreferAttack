@@ -46,7 +46,8 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
+REPO_ROOT = HERE.parent.parent  # src/defense -> repository root (so `src.*` / `utils.*` resolve)
+sys.path.insert(0, str(REPO_ROOT))
 
 from src.defense.tail_consistency_defense import (  # noqa: E402
     AttackRecord,
