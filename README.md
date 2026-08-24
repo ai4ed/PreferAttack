@@ -161,8 +161,6 @@ The runners are written for a **Linux/bash + GNU `getopt`** environment and defa
 | `run_seed_sweep.sh` | 5-seed sweep on a 20-sample subset |
 | `run_phase1_alpaca.sh` / `run_phase2_best_seed.sh` | multi-seed phase 1 / 2 runs |
 | `chain_sweep_to_phase2.sh` / `chain_phase2_to_alpaca_qwen15b.sh` | chained sweep → phase runs |
-| `run_ablation_wordlevel.sh` / `run_ablation_modulelevel.sh` | word-only / module-only ablations |
-
 Example:
 
 ```bash
