@@ -72,7 +72,6 @@ The judge is a **vLLM-served local model** (the default runners target Qwen3-VL-
 ├── check_asr_pairwise.py              # ASR / query statistics from a result file
 ├── data/split/                        # datasets + split-info files
 ├── assets/prompt_group.pth            # seed suffix population (loaded at startup)
-└── *.tex                              # LaTeX tables used for rebuttal
 ```
 
 ---
