@@ -288,13 +288,13 @@ python pred_tcd_cascade.py \
 If you use this code, please cite:
 
 ```bibtex
-@article{preferattack,
-  title   = {A Collaborative Multi-Agent Framework for Preference Attacks on {LLM-as-a-Judge} Models},
-  author  = {Zheng Zhou, Xueyi Li*,, Wenzhou Dou*,, Zitao Liu}, 
-  journal = {Expert Systems with Applications},
-  volume={***},
-  pages={***-***},
-  year    = {2026}
+@article{2026zhoua,
+  title={A Collaborative Multi-Agent Framework for Preference-Reversal Attacks on LLM-as-a-Judge Models},
+  author={Zhou, Zheng and Li, Xueyi and Dou, Wenzhou and Liu, Zitao},
+  journal={Expert Systems with Applications},
+  volume={333},
+  pages={133992},
+  year={2026}
 }
 ```
 
