@@ -118,6 +118,15 @@ A split-info file looks like:
 
 ## Quick start (main attack)
 
+### Requirements
+
+- Python 3.12+
+- PyTorch 2.8.0
+- Transformers 4.57.1
+- nltk 3.8.1
+- qwen-vl-utils 0.0.14
+- sentencepiece  0.1.99+
+
 ### Setup environment
 
 ```bash
