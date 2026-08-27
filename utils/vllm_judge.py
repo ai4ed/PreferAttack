@@ -166,6 +166,7 @@ class VLLMJudge(BaseJudge):
             dtype=dtype or "auto",
             enforce_eager=False,
             gpu_memory_utilization=float(os.environ.get("VLLM_GPU_MEMORY_UTILIZATION", "0.5")),
+            # 视情况调大模型的max_model_len
             max_model_len=int(os.environ.get("VLLM_MAX_MODEL_LEN", "23872")),
             swap_space=int(os.environ.get("VLLM_SWAP_SPACE_GB", "8")),
         )
