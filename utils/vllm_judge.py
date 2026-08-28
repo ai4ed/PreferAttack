@@ -164,7 +164,7 @@ class VLLMJudge(BaseJudge):
             tensor_parallel_size=tensor_parallel_size,
             trust_remote_code=trust_remote_code,
             dtype=dtype or "auto",
-            enforce_eager=False,
+            enforce_eager=True,
             gpu_memory_utilization=float(os.environ.get("VLLM_GPU_MEMORY_UTILIZATION", "0.5")),
             # 视情况调大模型的max_model_len
             max_model_len=int(os.environ.get("VLLM_MAX_MODEL_LEN", "23872")),
@@ -282,6 +282,30 @@ class VLLMJudge(BaseJudge):
         except Exception:
             pass
 
+    def _retry_sparams(self, base_sparams):
+        """Sampling params for re-rolling empty completions (fixed seed keeps it reproducible)."""
+        return SamplingParams(
+            max_tokens=max(32, base_sparams.max_tokens),
+            temperature=0.7,
+            top_p=0.9,
+            seed=0,
+        )
+
+    def _generate_nonempty(self, prompts, sparams, retries=2):
+        """Generate, re-rolling any empty completions with sampling params."""
+        results = self.llm.generate(prompts, sparams)
+        for _ in range(retries):
+            empty_idx = [i for i, r in enumerate(results)
+                         if not (r and r.outputs and (r.outputs[0].text or "").strip())]
+            if not empty_idx:
+                break
+            retry_params = self._retry_sparams(sparams)
+            rr = self.llm.generate([prompts[i] for i in empty_idx], retry_params)
+            for j, i in enumerate(empty_idx):
+                if rr[j] and rr[j].outputs and (rr[j].outputs[0].text or "").strip():
+                    results[i] = rr[j]
+        return results
+
     def judge_pairwise(self, example: PairwiseExample, modified_instruction: Optional[str] = None,
                        original_preference: Optional[int] = None) -> JudgeResponse:
         instr = modified_instruction if modified_instruction else example.instruction
@@ -303,8 +327,7 @@ class VLLMJudge(BaseJudge):
             text = result.get("text", "") if isinstance(result, dict) else ""
             usage = result.get("usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}) if isinstance(result, dict) else {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
         else:
-            outputs = self.llm.generate([prompt], self.sparams)
-            # print("🔹 Model outputs:", outputs)
+            outputs = self._generate_nonempty([prompt], self.sparams)
             text = outputs[0].outputs[0].text if outputs and outputs[0].outputs else ""
             usage = _extract_usage_from_request_output(outputs[0]) if outputs else {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
         pref, conf = self._parse_response(text, prompt, original_preference=original_preference)
@@ -316,7 +339,7 @@ class VLLMJudge(BaseJudge):
         modified_instructions: Optional[List[str]] = None,
         batch_size: int = 8,
         max_new_tokens: int = 10,
-        temperature: float = 0.1,
+        temperature: float = 0.0,
         do_sample: bool = False,
         truncation: bool = True,
         original_preferences: Optional[List[Optional[int]]] = None,
@@ -340,6 +363,7 @@ class VLLMJudge(BaseJudge):
             max_tokens=min(max_new_tokens or self.sparams.max_tokens, 64),
             temperature=temperature if temperature is not None else self.sparams.temperature,
             top_p=1.0,
+            seed=0,
         )
         # If continuous batching is enabled, submit each prompt and gather
         # results. Note: the batcher currently uses the SamplingParams of the
@@ -361,8 +385,7 @@ class VLLMJudge(BaseJudge):
             return out
 
         # vLLM 的 Python API 已内置分词与解码流程，无需额外处理，内部并行请求
-        results = self.llm.generate(prompts, sparams)
-        # print("🔹 Model outputs:", results)
+        results = self._generate_nonempty(prompts, sparams)
         out: List[JudgeResponse] = []
         for i, r in enumerate(results):
             text = r.outputs[0].text if r and r.outputs else ""
