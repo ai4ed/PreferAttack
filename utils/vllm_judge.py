@@ -196,8 +196,37 @@ class VLLMJudge(BaseJudge):
         else:
             self._batcher = None
 
+        # Llama-style instruct models need the chat template applied to the judge
+        # prompt; feeding raw text makes the small model drift into continuation /
+        # refusal / empty output instead of a clean "Output (a)/(b)".
+        self.use_llama_chat_template = os.environ.get("VLLM_USE_CHAT_TEMPLATE", "1") in ("1", "true", "True")
+        self._tokenizer = None
+
     def get_judge_prompt(self, example: PairwiseExample) -> str:
         return get_judge_prompt(example)
+
+    def _format_prompt(self, raw_prompt: str) -> str:
+        """Wrap the raw judge prompt in the model's chat template (Llama-3.x).
+
+        Instruct models are trained with the chat template; without it the raw
+        f-string prompt makes them treat the task as free-form continuation.
+        Falls back to the raw prompt if a tokenizer/chat template is unavailable.
+        """
+        if not getattr(self, 'use_llama_chat_template', True):
+            return raw_prompt
+        try:
+            if self._tokenizer is None:
+                from transformers import AutoTokenizer
+                self._tokenizer = AutoTokenizer.from_pretrained(self.model_path)
+            tok = self._tokenizer
+            if tok is None or not hasattr(tok, 'apply_chat_template'):
+                return raw_prompt
+            return tok.apply_chat_template(
+                [{"role": "user", "content": raw_prompt}],
+                tokenize=False, add_generation_prompt=True,
+            )
+        except Exception:
+            return raw_prompt
 
 #     def get_judge_prompt(self, example: PairwiseExample) -> str:
 #         return f"""Please evaluate the quality of two AI assistant responses and choose the better one.
@@ -283,11 +312,15 @@ class VLLMJudge(BaseJudge):
             pass
 
     def _retry_sparams(self, base_sparams):
-        """Sampling params for re-rolling empty completions (fixed seed keeps it reproducible)."""
+        """Re-roll empty completions while staying greedy (temperature=0.0).
+
+        Raising temperature here produces random drift (续写/复述/Neither) instead of a
+        clean "Output (a)/(b)", so we keep greedy decoding and only relax max_tokens.
+        """
         return SamplingParams(
             max_tokens=max(32, base_sparams.max_tokens),
-            temperature=0.7,
-            top_p=0.9,
+            temperature=0.0,
+            top_p=1.0,
             seed=0,
         )
 
@@ -317,20 +350,39 @@ class VLLMJudge(BaseJudge):
             model_a=example.model_a,
             model_b=example.model_b,
         )
-        prompt = self.get_judge_prompt(tmp)
-        if getattr(self, '_batcher', None) is not None:
-            fut = self._batcher.submit(prompt, self.sparams)
-            try:
-                result = fut.result(timeout=30)
-            except Exception:
-                result = {"text": "", "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}}
-            text = result.get("text", "") if isinstance(result, dict) else ""
-            usage = result.get("usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}) if isinstance(result, dict) else {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-        else:
-            outputs = self._generate_nonempty([prompt], self.sparams)
-            text = outputs[0].outputs[0].text if outputs and outputs[0].outputs else ""
-            usage = _extract_usage_from_request_output(outputs[0]) if outputs else {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        raw_prompt = self.get_judge_prompt(tmp)
+        prompt = self._format_prompt(raw_prompt)
+
+        def _generate(p: str):
+            if getattr(self, '_batcher', None) is not None:
+                fut = self._batcher.submit(p, self.sparams)
+                try:
+                    result = fut.result(timeout=30)
+                except Exception:
+                    result = {"text": "", "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}}
+                text = result.get("text", "") if isinstance(result, dict) else ""
+                usage = result.get("usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}) if isinstance(result, dict) else {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+            else:
+                outputs = self._generate_nonempty([p], self.sparams)
+                text = outputs[0].outputs[0].text if outputs and outputs[0].outputs else ""
+                usage = _extract_usage_from_request_output(outputs[0]) if outputs else {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+            return text, usage
+
+        text, usage = _generate(prompt)
         pref, conf = self._parse_response(text, prompt, original_preference=original_preference)
+
+        # If the first output cannot be parsed into a preference, do one format-
+        # correction retry (staying greedy) instead of returning None / random sampling.
+        if pref is None:
+            correction = ("\nYour previous response did not follow the required format.\n"
+                          "Do not explain your decision.\n"
+                          "Reply with exactly one of:\nOutput (a)\nOutput (b)")
+            retry_prompt = self._format_prompt(raw_prompt + correction)
+            text2, usage2 = _generate(retry_prompt)
+            pref2, conf2 = self._parse_response(text2, retry_prompt, original_preference=original_preference)
+            if pref2 is not None:
+                text, usage, pref, conf = text2, usage2, pref2, conf2
+
         return JudgeResponse(preference=pref, confidence=conf, raw_response=text, usage=usage)
 
     def judge_examples(
