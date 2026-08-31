@@ -139,20 +139,7 @@ pip install -r requirements.txt
 
 ### Run the attack
 
-The main entry point is `Multi_Agent_Framework.py`, which reads samples one at a time and evolves a suffix population per sample.
-
-```bash
-python Multi_Agent_Framework.py \
-  --qwen3_path /path/to/your/judge/model \
-  --split_info data/split/alpaca_eval_split_info.json \
-  --split test \
-  --num_samples 20 \
-  --batch_size 64 \
-  --num_steps 100 \
-  --use_rl_controller \
-  --gpt_mutation_prob 0.05 \
-  --save_path results/demo.json
-```
+bash run_pairwise.sh
 
 Results are written to the path given by **`--save_path`** (there is **no** `result.dir` config file — output location is controlled directly by this argument and by `--save-dir` in the shell runners). Each result file is a JSON object `{"meta": {...}, "records": [...]}` with per-sample `baseline`, `attack`, `success`, and `queries` fields, plus an `aggregate_stats` block.
 
@@ -162,10 +149,9 @@ The runners are written for a **Linux/bash + GNU `getopt`** environment and defa
 
 | Script | Purpose |
 |---|---|
-| `run_pairwise_qwen3.sh` | serial multi-dataset run (default `alpaca_eval arena_hard`) |
+| `run_pairwise_qwen3.sh` |  run |
 | `run_pairwise_qwen3_all.sh` | outer multi-model × inner multi-dataset sweep |
 | `run_pairwise_qwen3_all_code_judge.sh` | multi-model sweep on Code Judge Bench |
-| `run_seed_sweep.sh` | 5-seed sweep on a 20-sample subset |
 Example:
 
 ```bash
