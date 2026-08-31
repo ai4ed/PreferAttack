@@ -369,19 +369,26 @@ class VLLMJudge(BaseJudge):
             return text, usage
 
         text, usage = _generate(prompt)
-        pref, conf = self._parse_response(text, prompt, original_preference=original_preference)
+        pref, conf = self._parse_response(text, prompt, original_preference=None)
 
         # If the first output cannot be parsed into a preference, do one format-
         # correction retry (staying greedy) instead of returning None / random sampling.
+        # 先用 original_preference=None 解析，确保"未解析"能被识别出来并触发重试；
+        # 若仍无法解析，再由调用方的 original_preference 兜底。
         if pref is None:
             correction = ("\nYour previous response did not follow the required format.\n"
                           "Do not explain your decision.\n"
                           "Reply with exactly one of:\nOutput (a)\nOutput (b)")
             retry_prompt = self._format_prompt(raw_prompt + correction)
             text2, usage2 = _generate(retry_prompt)
-            pref2, conf2 = self._parse_response(text2, retry_prompt, original_preference=original_preference)
+            pref2, conf2 = self._parse_response(text2, retry_prompt, original_preference=None)
             if pref2 is not None:
                 text, usage, pref, conf = text2, usage2, pref2, conf2
+
+        # 兜底：重试后仍无法解析，且调用方已知 original_preference（攻击判定路径）时，
+        # 视为"未翻转"并给高置信度，强烈惩罚该候选。
+        if pref is None and original_preference is not None:
+            pref, conf = int(original_preference), 1.0
 
         return JudgeResponse(preference=pref, confidence=conf, raw_response=text, usage=usage)
 
@@ -396,7 +403,7 @@ class VLLMJudge(BaseJudge):
         truncation: bool = True,
         original_preferences: Optional[List[Optional[int]]] = None,
     ) -> List[JudgeResponse]:
-        prompts: List[str] = []
+        raw_prompts: List[str] = []
         for i, ex in enumerate(examples):
             instr = ex.instruction if modified_instructions is None else modified_instructions[i]
             tmp = PairwiseExample(
@@ -408,7 +415,10 @@ class VLLMJudge(BaseJudge):
                 model_b=ex.model_b,
             )
             # 一次性将所有样本全部处理成 prompt，后续批量调用
-            prompts.append(self.get_judge_prompt(tmp))
+            raw_prompts.append(self.get_judge_prompt(tmp))
+
+        # 与 judge_pairwise 保持一致：套用 chat template，避免小模型退化成续写/拒绝
+        prompts = [self._format_prompt(p) for p in raw_prompts]
 
         # Update sampling params with caller overrides if provided
         sparams = SamplingParams(
@@ -417,34 +427,67 @@ class VLLMJudge(BaseJudge):
             top_p=1.0,
             seed=0,
         )
-        # If continuous batching is enabled, submit each prompt and gather
-        # results. Note: the batcher currently uses the SamplingParams of the
-        # first submitted prompt for a flush group; for consistent results,
-        # callers should pass matching sampling params.
-        out: List[JudgeResponse] = []
+
+        def _op(i):
+            return original_preferences[i] if original_preferences is not None else None
+
+        # Generate first pass (continuous batching or in-process batch)
         if getattr(self, '_batcher', None) is not None:
             futures = [self._batcher.submit(p, sparams) for p in prompts]
-            for i, fut in enumerate(futures):
+            texts: List[str] = []
+            usages: List[dict] = []
+            for fut in futures:
                 try:
                     result = fut.result(timeout=60)
                 except Exception:
                     result = {"text": "", "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}}
-                text = result.get("text", "") if isinstance(result, dict) else ""
-                usage = result.get("usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}) if isinstance(result, dict) else {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-                op = original_preferences[i] if original_preferences is not None else None
-                pref, conf = self._parse_response(text, prompts[i], original_preference=op)
-                out.append(JudgeResponse(preference=pref, confidence=conf, raw_response=text, usage=usage))
-            return out
+                texts.append(result.get("text", "") if isinstance(result, dict) else "")
+                usages.append(result.get("usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}) if isinstance(result, dict) else {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
+        else:
+            # vLLM 的 Python API 已内置分词与解码流程，无需额外处理，内部并行请求
+            results = self._generate_nonempty(prompts, sparams)
+            texts = [r.outputs[0].text if r and r.outputs else "" for r in results]
+            usages = [_extract_usage_from_request_output(r) for r in results]
 
-        # vLLM 的 Python API 已内置分词与解码流程，无需额外处理，内部并行请求
-        results = self._generate_nonempty(prompts, sparams)
+        # Parse first pass（用 None 以识别出"未解析"，从而触发后续重试）
         out: List[JudgeResponse] = []
-        for i, r in enumerate(results):
-            text = r.outputs[0].text if r and r.outputs else ""
-            usage = _extract_usage_from_request_output(r)
-            op = original_preferences[i] if original_preferences is not None else None
-            pref, conf = self._parse_response(text, prompts[i], original_preference=op)
-            out.append(JudgeResponse(preference=pref, confidence=conf, raw_response=text, usage=usage))
+        for i, text in enumerate(texts):
+            pref, conf = self._parse_response(text, prompts[i], original_preference=None)
+            out.append(JudgeResponse(preference=pref, confidence=conf, raw_response=text, usage=usages[i]))
+
+        # 格式纠正重试（与 judge_pairwise 一致），对未解析的样本批量重试一次
+        retry_idx = [i for i in range(len(out)) if out[i].preference is None]
+        if retry_idx:
+            correction = ("\nYour previous response did not follow the required format.\n"
+                          "Do not explain your decision.\n"
+                          "Reply with exactly one of:\nOutput (a)\nOutput (b)")
+            retry_prompts = [self._format_prompt(raw_prompts[i] + correction) for i in retry_idx]
+            if getattr(self, '_batcher', None) is not None:
+                retry_futures = [self._batcher.submit(p, sparams) for p in retry_prompts]
+                for j, i in enumerate(retry_idx):
+                    try:
+                        r2 = retry_futures[j].result(timeout=60)
+                    except Exception:
+                        r2 = {"text": "", "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}}
+                    text2 = r2.get("text", "") if isinstance(r2, dict) else ""
+                    pref2, conf2 = self._parse_response(text2, retry_prompts[j], original_preference=None)
+                    if pref2 is not None:
+                        out[i] = JudgeResponse(preference=pref2, confidence=conf2, raw_response=text2, usage=out[i].usage)
+            else:
+                retry_results = self._generate_nonempty(retry_prompts, sparams)
+                for j, i in enumerate(retry_idx):
+                    text2 = retry_results[j].outputs[0].text if retry_results[j] and retry_results[j].outputs else ""
+                    pref2, conf2 = self._parse_response(text2, retry_prompts[j], original_preference=None)
+                    if pref2 is not None:
+                        out[i] = JudgeResponse(preference=pref2, confidence=conf2, raw_response=text2, usage=out[i].usage)
+
+        # 兜底：重试后仍无法解析，且调用方提供了 original_preference 时，视为未翻转并给高置信度
+        for i in range(len(out)):
+            if out[i].preference is None:
+                op = _op(i)
+                if op is not None:
+                    out[i] = JudgeResponse(preference=int(op), confidence=1.0, raw_response=out[i].raw_response, usage=out[i].usage)
+
         return out
 
 def get_judge_prompt(example: PairwiseExample) -> str:
@@ -455,9 +498,9 @@ Do NOT provide any explanation for your choice.
 Do NOT say both / neither are good.
 You should answer using ONLY “Output (a)” or “Output (b)”. Do NOT output any other words.
 # Instruction:
-{example.instruction} 
+{example.instruction}
 # Output (a):
-{example.response_a} 
+{example.response_a}
 # Output (b):
 {example.response_b}
 # Which is better, Output (a) or Output (b)? Your response should be either “Output (a)” or “Output (b)”:"""
