@@ -139,7 +139,9 @@ pip install -r requirements.txt
 
 ### Run the attack
 
-bash run_pairwise.sh
+```bash
+bash run_pairwise_qwen3.sh   
+```
 
 Results are written to the path given by **`--save_path`** (there is **no** `result.dir` config file — output location is controlled directly by this argument and by `--save-dir` in the shell runners). Each result file is a JSON object `{"meta": {...}, "records": [...]}` with per-sample `baseline`, `attack`, `success`, and `queries` fields, plus an `aggregate_stats` block.
 
